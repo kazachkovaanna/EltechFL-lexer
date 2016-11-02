@@ -24,16 +24,16 @@ Operator = "+" | "-" | "*" | "/" | "%" | "==" | "!=" | ">" | ">=" | "<" | "<=" |
 Set = ":="
 Semicolon = ";"
 NewLine = \n | \r | \r\n
-Skip = "skip"
+Skip = "skip" ([ ,\t])
 Var = [a-zA-Z]+
-Write = "write "
-Read = "read "
-While = "while "
-Do = "do "
-If = "if "
-Then = "then "
-Else = "else "
-Comment =  "//" [^\r\n]* {NewLine}? | "(*" [^*] ~"*)"
+Write = "write" ([ ,\t])
+Read = "read" ([ ,\t])
+While = "while" ([ ,\t])
+Do = "do" ([ ,\t])
+If = "if" ([ ,\t])
+Then = "then" ([ ,\t])
+Else = "else"
+Comment =  "//" [^\r\n]* {NewLine}? | "(*" [^]* ~"*)"
 Other = [^]
 
 %%
@@ -62,7 +62,7 @@ Other = [^]
 	
 }
 
-{NewLine} {
+{NewLine} | [ ,\t] {
 	
 }
 
@@ -79,11 +79,6 @@ Other = [^]
 
 {Skip} {
 	System.out.printf("KW_Skip(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
-}
-
-{Var} {
-	System.out.printf("Var(\"%s\", %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
 	
 }
 
@@ -123,6 +118,11 @@ Other = [^]
 
 }
 
-{Other} {
+{Var} {
+	System.out.printf("Var(\"%s\", %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
+	
+}
 
+{Other} {
+	throw new IOException("unexpected character: " + yytext());
 }
