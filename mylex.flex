@@ -2,18 +2,66 @@ import java.io.IOException;
 
 %%
 
-%class Parser
 %byaccj
 %line
 %column
-%standalone
 
 %{
   private Parser yyparser;
+  private boolean yyfilter = false;
 
-  public Parser(java.io.Reader r, Parser yyparser) {
+  public Yylex(java.io.Reader r, Parser yyparser, boolean filter) {
     this(r);
     this.yyparser = yyparser;
+  }
+
+  public void setFilter(boolean filter) {
+    this.yyfilter = filter;
+  }
+
+  public boolean getFilter() {
+    return yyfilter;
+  }
+
+  public boolean atEOF() {
+    return zzAtEOF;
+  }
+
+  private void printToken(String str){
+  	System.out.println(str);
+  }
+  public static void main(String args[]){
+  	if (args.length == 0) {
+			System.err.println("Укажите фаил в параметрах запуска");
+			System.exit(-1);
+	}
+        
+	boolean filter = false;
+	int pos = 0;
+	if (args.length > 1 && args[1].equals("-filter")) {
+		filter = true;
+	} 
+    Yylex scanner = null;
+    try {
+      java.io.FileInputStream stream = new java.io.FileInputStream(args[0]);
+      java.io.Reader reader = new java.io.InputStreamReader(stream);
+      scanner = new Yylex(reader, new Parser(reader), filter);
+      while ( !scanner.zzAtEOF ) scanner.yylex();
+    }
+    catch (java.io.FileNotFoundException e) {
+      System.out.printf("File not found : \"%s\"", args[0]);
+    }
+    catch (java.io.IOException e) {
+      System.out.printf("IO error scanning file \"%s\"", args[0]);
+      System.out.println(e);
+    }
+    catch (Exception e) {
+      System.out.println("Unexpected exception:");
+      e.printStackTrace();
+    }
+    filter = false;
+
+	
   }
 %}
 
@@ -24,103 +72,110 @@ Operator = "+" | "-" | "*" | "/" | "%" | "==" | "!=" | ">" | ">=" | "<" | "<=" |
 Set = ":="
 Semicolon = ";"
 NewLine = \n | \r | \r\n
-Skip = "skip" ([ ,\t])
+Skip = "skip" 
 Var = [a-zA-Z]+
-Write = "write" ([ ,\t])
-Read = "read" ([ ,\t])
-While = "while" ([ ,\t])
-Do = "do" ([ ,\t])
-If = "if" ([ ,\t])
-Then = "then" ([ ,\t])
-Else = "else"
+Write = "write" ([ \t])
+Read = "read" ([ \t])
+While = "while" ([ \t])
+Do = "do" ([ \t])
+If = "if" ([ \t])
+Then = "then" ([ \t])
+Else = "else" ([ \t])
 Comment =  "//" [^\r\n]* {NewLine}? | "(*" [^]* ~"*)"
 Other = [^]
 
 %%
 {Comment} {
-	System.out.printf("Comment(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
+    if (true == getFilter()) {
+   		printToken("Comment(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+        return Parser.COMMENT;
+    }
 }
 
 {Num} {
-	System.out.printf("Num(\"%s\", %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("Num("+yytext()+", " + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+    yyparser.yylval = new ParserVal(Integer.parseInt(yytext()));
+	return Parser.NUM;
 }
 
 
 {Operator} {
-	System.out.printf("Op(%s, %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("Operator("+yytext()+", " + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	yyparser.yylval = new ParserVal(yytext());
+	return Parser.OPERATOR;
 }
 
 {Set} {
-	System.out.printf("KW_Set(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("Set(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.SET;
 }
 
 {Semicolon} {
-	System.out.printf("Semicolon(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("Semicolon(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.SEMICOLON;
 }
 
-{NewLine} | [ ,\t] {
-	
+{NewLine} | [ \t] {
 }
 
 
 "(" {
-	System.out.printf("Bracket(%s, %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
+	printToken("Bracket("+yytext()+", " + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+    return Parser.LBKT;
 }
 	
 
 ")" {
-	System.out.printf("Bracket(%s, %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
+	printToken("Bracket("+yytext()+", " + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+    return Parser.RBKT;
 	
 }
 
 {Skip} {
-	System.out.printf("KW_Skip(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_Skip(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.SKIP;
 }
 
 {Write} {
-	System.out.printf("KW_Write(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_Write(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.WRITE;
 }
 
 {Read} {
-	System.out.printf("KW_Read(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_Read(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.READ;
 }
 
 {While} {
-	System.out.printf("KW_While(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_While(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.WHILE;
 }
 
 {Do} {
-	System.out.printf("KW_Do(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_Do(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.DO;
 }
 
 {If} {
-	System.out.printf("KW_If(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_If(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.IF;
 }
 
 {Then} {
-	System.out.printf("KW_Then(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_Then(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.THEN;
 }
 
 {Else} {
-	System.out.printf("KW_Else(%d, %d, %d); ", yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("KW_Else(" + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	return Parser.ELSE;
 
 }
 
 {Var} {
-	System.out.printf("Var(\"%s\", %d, %d, %d); ", yytext(), yyline, yycolumn, yycolumn + yytext().length());
-	
+	printToken("Var("+yytext()+", " + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
+	yyparser.yylval = new ParserVal(yytext());
+	return Parser.VAR;
 }
 
 {Other} {
