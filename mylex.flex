@@ -13,6 +13,7 @@ import java.io.IOException;
   public Yylex(java.io.Reader r, Parser yyparser, boolean filter) {
     this(r);
     this.yyparser = yyparser;
+    this.yyfilter = filter;
   }
 
   public void setFilter(boolean filter) {
@@ -67,22 +68,23 @@ import java.io.IOException;
 
 /*перечисляются возмоные элементы языка*/
 
-Num = ("-")? [0-9]+
+Num = ("-")? ([0-9]+) ([, ,\t] | {NewLine} )
 Operator = "+" | "-" | "*" | "/" | "%" | "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "**"
 Set = ":="
 Semicolon = ";"
 NewLine = \n | \r | \r\n
 Skip = "skip" 
 Var = [a-zA-Z]+
-Write = "write" ([ \t])
-Read = "read" ([ \t])
-While = "while" ([ \t])
-Do = "do" ([ \t])
-If = "if" ([ \t])
-Then = "then" ([ \t])
-Else = "else" ([ \t])
-Comment =  "//" [^\r\n]* {NewLine}? | "(*" [^]* ~"*)"
+Write = "write" ([, ,\t] | {NewLine})
+Read = "read" ([, ,\t] | {NewLine})
+While = "while" ([, ,\t] | {NewLine})
+Do = "do" ([, ,\t] | {NewLine})
+If = "if" ([, ,\t] | {NewLine})
+Then = "then" ([, ,\t] | {NewLine})
+Else = "else" ([, ,\t] | {NewLine})
+Comment =  "//" [^\r\n]* {NewLine}? | "(*" [^*]? ~"*)"
 Other = [^]
+
 
 %%
 {Comment} {
@@ -94,7 +96,7 @@ Other = [^]
 
 {Num} {
 	printToken("Num("+yytext()+", " + yyline+", " + yycolumn+ ", " + (yycolumn + yytext().length()) + ")");
-    yyparser.yylval = new ParserVal(Integer.parseInt(yytext()));
+    yyparser.yylval = new ParserVal(Integer.parseInt(yytext().replaceAll("\\s+","")));
 	return Parser.NUM;
 }
 
